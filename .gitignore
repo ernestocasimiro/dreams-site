@@ -31,3 +31,5 @@ coverage/
 # Optional: lockfiles (se quiseres ignorar apenas)
 # package-lock.json
 # yarn.lock
+
+.vercel

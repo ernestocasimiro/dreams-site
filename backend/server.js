@@ -12,12 +12,13 @@ const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://gilded-squirrel-086a27.netlify.app' // Netlify frontend
+  'https://gilded-squirrel-086a27.netlify.app',
+  'https://monumentofdreams-hyahgnxz6-ernestomiguelito-gmailcoms-projects.vercel.app'
 ];
 
 app.use(cors({
   origin: function(origin, callback){
-    if(!origin) return callback(null, true); // permitir Postman ou requisições diretas
+    if(!origin) return callback(null, true);
     if(allowedOrigins.indexOf(origin) === -1){
       const msg = `CORS policy does not allow access from this origin: ${origin}`;
       return callback(new Error(msg), false);
@@ -29,8 +30,17 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin']
 }));
 
-// Lidar com preflight requests
 app.options('*', cors());
+
+// ===== ROTA RAIZ PARA EVITAR "Cannot GET /" =====
+app.get('/', (req, res) => {
+  res.json({
+    status: 'OK',
+    message: 'Dreams Backend Root',
+    version: '1.0.0',
+    time: new Date().toISOString()
+  });
+});
 
 app.use(express.json());
 
@@ -48,9 +58,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Rota de teste CORS
+// Teste CORS
 app.post('/test-create-session', (req, res) => {
-  console.log('✅ CORS test endpoint called from:', req.headers.origin);
   res.json({
     success: true,
     test: true,
@@ -60,12 +69,8 @@ app.post('/test-create-session', (req, res) => {
   });
 });
 
-// Criar sessão de checkout REAL
+// Criar sessão de checkout Stripe
 app.post('/create-checkout-session', async (req, res) => {
-  console.log('📦 Creating checkout session...');
-  console.log('Origin:', req.headers.origin);
-  console.log('Body:', req.body);
-  
   try {
     const { dreamId, author = 'Anonymous', country = 'Unknown' } = req.body;
 
@@ -76,7 +81,6 @@ app.post('/create-checkout-session', async (req, res) => {
       });
     }
 
-    // Criar sessão no Stripe
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -87,14 +91,14 @@ app.post('/create-checkout-session', async (req, res) => {
               name: 'Dream Submission',
               description: `Support dream from ${author} in ${country}`,
             },
-            unit_amount: 100, // $1.00 em centavos
+            unit_amount: 100,
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/success?session_id={CHECKOUT_SESSION_ID}&dream_id=${dreamId}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:8080'}/submit`,
+      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}&dream_id=${dreamId}`,
+      cancel_url: `${process.env.FRONTEND_URL}/submit`,
       metadata: {
         dreamId,
         author,
@@ -102,8 +106,6 @@ app.post('/create-checkout-session', async (req, res) => {
         type: 'dream_submission'
       },
     });
-
-    console.log(`✅ Session created: ${session.id} for dream ${dreamId}`);
 
     res.json({
       success: true,
@@ -113,7 +115,6 @@ app.post('/create-checkout-session', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Stripe error:', error.message);
     res.status(500).json({
       error: 'Payment failed',
       message: error.message,
@@ -122,25 +123,16 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
-// Rota de teste simples
+// Test route
 app.get('/test', (req, res) => {
   res.json({
     message: 'Backend is working!',
-    yourIp: req.ip,
     origin: req.headers.origin,
     time: new Date().toISOString()
   });
 });
 
-// ===== Iniciar servidor =====
+// Start server
 app.listen(PORT, () => {
-  console.log('\n' + '='.repeat(50));
-  console.log('🚀 DREAMS BACKEND STARTED');
-  console.log('='.repeat(50));
-  console.log(`📡 Port: ${PORT}`);
-  console.log(`🏠 Frontend URL: ${process.env.FRONTEND_URL}`);
-  console.log(`🔗 Health Check: http://localhost:${PORT}/health`);
-  console.log(`🧪 CORS Test: POST http://localhost:${PORT}/test-create-session`);
-  console.log(`🛒 Create Session: POST http://localhost:${PORT}/create-checkout-session`);
-  console.log('='.repeat(50) + '\n');
+  console.log(`🚀 Backend running on port ${PORT}`);
 });

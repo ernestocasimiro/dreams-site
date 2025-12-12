@@ -5,21 +5,24 @@ import { createServer } from "./server";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "./", // ✅ MUITO IMPORTANTE para funcionar no Vercel SPA
+
   server: {
     host: "::",
     port: 8080,
     fs: {
-      // ✅ permite acessar arquivos na raiz (onde está seu index.html)
       allow: ["./", "./client", "./shared"],
-
-      // mantém suas restrições originais
+      // removido: base dentro de fs (era incorreto)
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
     },
   },
+
   build: {
     outDir: "dist/spa",
   },
+
   plugins: [react(), expressPlugin()],
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./client"),
@@ -31,11 +34,9 @@ export default defineConfig(({ mode }) => ({
 function expressPlugin(): Plugin {
   return {
     name: "express-plugin",
-    apply: "serve", // Only apply during development (serve mode)
+    apply: "serve", // Only during dev
     configureServer(server) {
       const app = createServer();
-
-      // Add Express app as middleware to Vite dev server
       server.middlewares.use(app);
     },
   };
