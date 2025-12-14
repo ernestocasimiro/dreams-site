@@ -7,7 +7,9 @@ const Stripe = require('stripe');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ===== Stripe =====
+/* =======================
+   STRIPE CONFIG
+======================= */
 if (!process.env.STRIPE_SECRET_KEY) {
   console.error('❌ STRIPE_SECRET_KEY não definido!');
 }
@@ -16,31 +18,40 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16',
 });
 
-// ===== Frontend URL =====
+/* =======================
+   FRONTEND URL
+======================= */
 const FRONTEND_URL =
-  process.env.FRONTEND_URL ||
-  'http://localhost:8080';
+  process.env.FRONTEND_URL || 'http://localhost:8080';
 
-// ===== Configuração CORS =====
+/* =======================
+   CORS CONFIG (ROBUSTO)
+======================= */
 const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:5173',
   'http://localhost:3000',
   'https://gilded-squirrel-086a27.netlify.app',
-  'https://monumentofdreams-hyahgnxz6-ernestomiguelito-gmailcoms-projects.vercel.app',
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Permite Postman, Stripe webhooks, server-to-server
       if (!origin) return callback(null, true);
 
-      if (!allowedOrigins.includes(origin)) {
-        console.warn('🚫 CORS bloqueado:', origin);
-        return callback(new Error('Not allowed by CORS'), false);
+      // ✅ Permite QUALQUER deploy do Vercel
+      if (origin.endsWith('.vercel.app')) {
+        return callback(null, true);
       }
 
-      return callback(null, true);
+      // ✅ Domínios fixos permitidos
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn('🚫 CORS bloqueado:', origin);
+      return callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
@@ -48,10 +59,17 @@ app.use(
   })
 );
 
-// ===== Middlewares =====
+// ✅ MUITO IMPORTANTE PARA CORS
+app.options('*', cors());
+
+/* =======================
+   MIDDLEWARES
+======================= */
 app.use(express.json());
 
-// ===== ROTA RAIZ =====
+/* =======================
+   ROOT
+======================= */
 app.get('/', (req, res) => {
   res.json({
     status: 'OK',
@@ -61,7 +79,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// ===== HEALTH CHECK =====
+/* =======================
+   HEALTH CHECK
+======================= */
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -69,11 +89,12 @@ app.get('/health', (req, res) => {
     stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
     frontendUrl: FRONTEND_URL,
     timestamp: new Date().toISOString(),
-    allowedOrigins,
   });
 });
 
-// ===== TESTE CORS =====
+/* =======================
+   TEST CORS
+======================= */
 app.post('/test-create-session', (req, res) => {
   res.json({
     success: true,
@@ -83,7 +104,9 @@ app.post('/test-create-session', (req, res) => {
   });
 });
 
-// ===== STRIPE CHECKOUT =====
+/* =======================
+   STRIPE CHECKOUT
+======================= */
 app.post('/create-checkout-session', async (req, res) => {
   try {
     const { dreamId, author = 'Anonymous', country = 'Unknown' } = req.body;
@@ -93,6 +116,13 @@ app.post('/create-checkout-session', async (req, res) => {
         error: 'dreamId is required',
       });
     }
+
+    console.log('💳 Criando checkout:', {
+      dreamId,
+      author,
+      country,
+      origin: req.headers.origin,
+    });
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -135,7 +165,9 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
-// ===== TESTE GERAL =====
+/* =======================
+   TEST ROUTE
+======================= */
 app.get('/test', (req, res) => {
   res.json({
     message: 'Backend is working!',
@@ -144,7 +176,9 @@ app.get('/test', (req, res) => {
   });
 });
 
-// ===== START SERVER =====
+/* =======================
+   START SERVER
+======================= */
 app.listen(PORT, () => {
   console.log('='.repeat(50));
   console.log('🚀 DREAMS BACKEND STARTED');
