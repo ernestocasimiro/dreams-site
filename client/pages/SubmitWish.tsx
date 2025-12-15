@@ -10,7 +10,9 @@ const RAW_BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL || "https://dreams-site.onrender.com";
 
 // 🔒 Remove barra final se existir
-const BACKEND_URL = RAW_BACKEND_URL.replace(/\/$/, "");
+const BACKEND_URL = (RAW_BACKEND_URL || "")
+  .trim()
+  .replace(/\/+$/, "");
 
 export default function SubmitWish() {
   const [wish, setWish] = useState("");
