@@ -25,7 +25,7 @@ const FRONTEND_URL =
   process.env.FRONTEND_URL || 'http://localhost:8080';
 
 /* =======================
-   CORS CONFIG (ROBUSTO)
+   CORS CONFIG
 ======================= */
 const allowedOrigins = [
   'http://localhost:8080',
@@ -37,15 +37,20 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Permite Postman, Stripe webhooks, server-to-server
+      // Permite server-to-server / Postman
       if (!origin) return callback(null, true);
 
-      // ✅ Permite QUALQUER deploy do Vercel
+      // ✅ Permite Vercel
       if (origin.endsWith('.vercel.app')) {
         return callback(null, true);
       }
 
-      // ✅ Domínios fixos permitidos
+      // ✅ Permite Netlify
+      if (origin.endsWith('.netlify.app')) {
+        return callback(null, true);
+      }
+
+      // ✅ Domínios fixos
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -59,7 +64,6 @@ app.use(
   })
 );
 
-// ✅ MUITO IMPORTANTE PARA CORS
 app.options('*', cors());
 
 /* =======================
@@ -85,7 +89,6 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
-    message: 'Dreams Backend is running',
     stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
     frontendUrl: FRONTEND_URL,
     timestamp: new Date().toISOString(),
@@ -93,19 +96,7 @@ app.get('/health', (req, res) => {
 });
 
 /* =======================
-   TEST CORS
-======================= */
-app.post('/test-create-session', (req, res) => {
-  res.json({
-    success: true,
-    message: 'CORS is working correctly!',
-    origin: req.headers.origin,
-    time: new Date().toISOString(),
-  });
-});
-
-/* =======================
-   STRIPE CHECKOUT
+   STRIPE CHECKOUT (POST)
 ======================= */
 app.post('/create-checkout-session', async (req, res) => {
   try {
@@ -131,7 +122,7 @@ app.post('/create-checkout-session', async (req, res) => {
         {
           price_data: {
             currency: 'usd',
-            unit_amount: 100, // $1.00
+            unit_amount: 100,
             product_data: {
               name: 'Dream Submission',
               description: `Support dream from ${author} in ${country}`,
@@ -146,7 +137,6 @@ app.post('/create-checkout-session', async (req, res) => {
         dreamId,
         author,
         country,
-        type: 'dream_submission',
       },
     });
 
@@ -166,13 +156,12 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 /* =======================
-   TEST ROUTE
+   METHOD GUARD (GET)
 ======================= */
-app.get('/test', (req, res) => {
-  res.json({
-    message: 'Backend is working!',
-    origin: req.headers.origin,
-    time: new Date().toISOString(),
+app.get('/create-checkout-session', (req, res) => {
+  res.status(405).json({
+    error: 'Method Not Allowed',
+    message: 'Use POST to create a checkout session',
   });
 });
 
