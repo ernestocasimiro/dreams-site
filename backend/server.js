@@ -37,12 +37,9 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // Postman ou server-to-server
+      if (!origin) return callback(null, true);
 
-      // Domínios fixos
       if (allowedOrigins.includes(origin)) return callback(null, true);
-
-      // Permitir todos subdomínios Vercel/Netlify
       if (origin?.endsWith(".vercel.app")) return callback(null, true);
       if (origin?.endsWith(".netlify.app")) return callback(null, true);
 
@@ -55,7 +52,6 @@ app.use(
   })
 );
 
-// Preflight handler (deve vir logo após o CORS)
 app.options("*", cors());
 
 /* =======================
@@ -176,15 +172,7 @@ app.post("/create-checkout-session", async (req, res) => {
   try {
     const { dream } = req.body;
 
-    // Validação
-    if (
-      !dream ||
-      typeof dream !== "object" ||
-      !dream.title ||
-      !dream.description ||
-      !dream.author ||
-      !dream.country
-    ) {
+    if (!dream || typeof dream !== "object" || !dream.title || !dream.description || !dream.author || !dream.country) {
       return res.status(400).json({ error: "Invalid dream data" });
     }
 
@@ -211,7 +199,7 @@ app.post("/create-checkout-session", async (req, res) => {
         },
       ],
       success_url: `${FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${FRONTEND_URL}/submit?ts=${Date.now()}`
+      cancel_url: `${FRONTEND_URL}/submit?ts=${Date.now()}`,
       metadata: {
         dream_title: dream.title,
         dream_description: dream.description,
