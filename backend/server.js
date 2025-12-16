@@ -1,8 +1,8 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const express = require('express');
-const cors = require('cors');
-const Stripe = require('stripe');
+const express = require("express");
+const cors = require("cors");
+const Stripe = require("stripe");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,74 +11,63 @@ const PORT = process.env.PORT || 3001;
    STRIPE CONFIG
 ======================= */
 if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('❌ STRIPE_SECRET_KEY não definido!');
+  console.error("❌ STRIPE_SECRET_KEY não definido!");
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16',
+  apiVersion: "2023-10-16",
 });
 
 /* =======================
    FRONTEND URL
 ======================= */
 const FRONTEND_URL =
-  process.env.FRONTEND_URL || 'http://localhost:8080';
+  process.env.FRONTEND_URL || "http://localhost:8080";
 
 /* =======================
    CORS CONFIG
 ======================= */
 const allowedOrigins = [
-  'http://localhost:8080',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://gilded-squirrel-086a27.netlify.app',
+  "http://localhost:8080",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://gilded-squirrel-086a27.netlify.app",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Permite server-to-server / Postman
       if (!origin) return callback(null, true);
 
-      // ✅ Permite Vercel
-      if (origin.endsWith('.vercel.app')) {
-        return callback(null, true);
-      }
+      if (origin.endsWith(".vercel.app")) return callback(null, true);
+      if (origin.endsWith(".netlify.app")) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      // ✅ Permite Netlify
-      if (origin.endsWith('.netlify.app')) {
-        return callback(null, true);
-      }
-
-      // ✅ Domínios fixos
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      console.warn('🚫 CORS bloqueado:', origin);
-      return callback(new Error('Not allowed by CORS'), false);
+      console.warn("🚫 CORS bloqueado:", origin);
+      return callback(new Error("Not allowed by CORS"), false);
     },
     credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-app.options('*', cors());
+app.options("*", cors());
 
 /* =======================
    MIDDLEWARES
 ======================= */
-app.use(express.json());
+// ⚠️ Limitado e seguro
+app.use(express.json({ limit: "1mb" }));
 
 /* =======================
    ROOT
 ======================= */
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.json({
-    status: 'OK',
-    message: 'Dreams Backend Root',
-    environment: process.env.NODE_ENV || 'development',
+    status: "OK",
+    message: "Dreams Backend Root",
+    environment: process.env.NODE_ENV || "development",
     time: new Date().toISOString(),
   });
 });
@@ -86,9 +75,9 @@ app.get('/', (req, res) => {
 /* =======================
    HEALTH CHECK
 ======================= */
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.json({
-    status: 'OK',
+    status: "OK",
     stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
     frontendUrl: FRONTEND_URL,
     timestamp: new Date().toISOString(),
@@ -96,72 +85,175 @@ app.get('/health', (req, res) => {
 });
 
 /* =======================
+   STRIPE WEBHOOK (RAW BODY)
+======================= */
+app.post(
+  "/webhook/stripe",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("❌ Webhook signature verification failed:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // ✅ Apenas este evento interessa
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      console.log("✅ Pagamento confirmado:", session.id);
+
+      const metadata = session.metadata;
+
+      if (!metadata || !metadata.dream_title) {
+        console.warn("⚠️ Metadata ausente, ignorando");
+        return res.status(200).json({ received: true });
+      }
+
+      try {
+        /* =======================
+           SUPABASE CLIENT
+        ======================= */
+        const { createClient } = require("@supabase/supabase-js");
+
+        const supabase = createClient(
+          process.env.SUPABASE_URL,
+          process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
+
+        /* =======================
+           DUPLICATION PROTECTION
+        ======================= */
+        const { data: existing } = await supabase
+          .from("dreams")
+          .select("id")
+          .eq("stripe_session_id", session.id)
+          .single();
+
+        if (existing) {
+          console.log("⚠️ Sonho já salvo anteriormente");
+          return res.status(200).json({ received: true });
+        }
+
+        /* =======================
+           SAVE DREAM (PAID)
+        ======================= */
+        const { error } = await supabase.from("dreams").insert([
+          {
+            title: metadata.dream_title,
+            description: metadata.dream_description,
+            author: metadata.dream_author,
+            country: metadata.dream_country,
+            language: metadata.dream_language || null,
+            likes: 0,
+            views: 0,
+            paid: true,
+            stripe_session_id: session.id,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+
+        if (error) {
+          console.error("❌ Supabase insert error:", error);
+          return res.status(500).send("Database error");
+        }
+
+        console.log("🎉 Sonho salvo com sucesso (PAGO)");
+      } catch (dbError) {
+        console.error("❌ Webhook DB error:", dbError);
+        return res.status(500).send("Internal error");
+      }
+    }
+
+    res.json({ received: true });
+  }
+);
+
+
+/* =======================
    STRIPE CHECKOUT (POST)
 ======================= */
-app.post('/create-checkout-session', async (req, res) => {
+app.post("/create-checkout-session", async (req, res) => {
   try {
-    const { dreamId, author = 'Anonymous', country = 'Unknown' } = req.body;
+    const { dream } = req.body;
 
-    if (!dreamId) {
+    // 🔒 Validação forte
+    if (
+      !dream ||
+      typeof dream !== "object" ||
+      !dream.title ||
+      !dream.description ||
+      !dream.author ||
+      !dream.country
+    ) {
       return res.status(400).json({
-        error: 'dreamId is required',
+        error: "Invalid dream data",
       });
     }
 
-    console.log('💳 Criando checkout:', {
-      dreamId,
-      author,
-      country,
+    console.log("💳 Criando checkout (SEM salvar no DB)", {
+      author: dream.author,
+      country: dream.country,
       origin: req.headers.origin,
     });
 
     const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
+      mode: "payment",
+      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
-            currency: 'usd',
-            unit_amount: 100,
+            currency: "usd",
+            unit_amount: 100, // $1.00
             product_data: {
-              name: 'Dream Submission',
-              description: `Support dream from ${author} in ${country}`,
+              name: "Dream Submission",
+              description: `Support a dream from ${dream.author} (${dream.country})`,
             },
           },
           quantity: 1,
         },
       ],
-      success_url: `${FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}&dream_id=${dreamId}`,
+      success_url: `${FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${FRONTEND_URL}/submit`,
       metadata: {
-        dreamId,
-        author,
-        country,
+        dream_title: dream.title,
+        dream_description: dream.description,
+        dream_author: dream.author,
+        dream_country: dream.country,
+        dream_language: dream.language || "",
       },
     });
 
-    res.json({
+    return res.json({
       success: true,
       sessionId: session.id,
       url: session.url,
     });
-
   } catch (error) {
-    console.error('❌ Stripe error:', error);
-    res.status(500).json({
-      error: 'Payment failed',
+    console.error("❌ Stripe error:", error);
+    return res.status(500).json({
+      error: "Payment failed",
       message: error.message,
     });
   }
 });
 
 /* =======================
-   METHOD GUARD (GET)
+   METHOD GUARD
 ======================= */
-app.get('/create-checkout-session', (req, res) => {
+app.get("/create-checkout-session", (req, res) => {
   res.status(405).json({
-    error: 'Method Not Allowed',
-    message: 'Use POST to create a checkout session',
+    error: "Method Not Allowed",
+    message: "Use POST to create a checkout session",
   });
 });
 
@@ -169,10 +261,10 @@ app.get('/create-checkout-session', (req, res) => {
    START SERVER
 ======================= */
 app.listen(PORT, () => {
-  console.log('='.repeat(50));
-  console.log('🚀 DREAMS BACKEND STARTED');
+  console.log("=".repeat(50));
+  console.log("🚀 DREAMS BACKEND STARTED");
   console.log(`📡 Port: ${PORT}`);
   console.log(`🌍 Frontend: ${FRONTEND_URL}`);
   console.log(`💳 Stripe OK: ${!!process.env.STRIPE_SECRET_KEY}`);
-  console.log('='.repeat(50));
+  console.log("=".repeat(50));
 });
