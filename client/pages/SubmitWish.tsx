@@ -15,10 +15,6 @@ export default function SubmitWish() {
   const [error, setError] = useState("");
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
-  /* =========================
-     HELPERS
-  ========================== */
-
   const generateTitle = (description: string, authorName: string): string => {
     if (!description.trim()) return `Dream from ${authorName}`;
     const words = description.trim().split(/\s+/);
@@ -39,42 +35,50 @@ export default function SubmitWish() {
   /* =========================
      STRIPE SESSION (SEM DB)
   ========================== */
-
   const createCheckoutSession = async (dreamTitle: string) => {
     addDebug("Creating Stripe checkout session (no DB write)");
 
-    const response = await fetch(`${BACKEND_URL}/create-checkout-session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: 100,
-        currency: "usd",
-        dream: {
-          title: dreamTitle,
-          description: wish,
-          author: author.trim(),
-          country: country.trim(),
-          language: language.trim() || null,
-        },
-      }),
-    });
+    try {
+      const response = await fetch(`${BACKEND_URL}/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: 100,
+          currency: "usd",
+          dream: {
+            title: dreamTitle,
+            description: wish,
+            author: author.trim(),
+            country: country.trim(),
+            language: language.trim() || null,
+          },
+        }),
+      });
 
-    const data = await response.json();
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(
+          errData?.error || "Failed to create payment session. Try again."
+        );
+      }
 
-    if (!response.ok || !data?.url) {
-      throw new Error(
-        data?.error || "Failed to create payment session. Try again."
-      );
+      const data = await response.json();
+
+      if (!data?.url) {
+        throw new Error("Payment URL not returned by server.");
+      }
+
+      addDebug("Checkout session created successfully");
+      return data;
+    } catch (err: any) {
+      addDebug(`Network/Fetch error: ${err.message}`);
+      throw err;
     }
-
-    addDebug("Checkout session created successfully");
-    return data;
   };
 
   /* =========================
      SUBMIT HANDLER
   ========================== */
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     clearDebug();
@@ -99,6 +103,7 @@ export default function SubmitWish() {
       const dreamTitle = generateTitle(wish, author);
       addDebug(`Generated title: ${dreamTitle}`);
 
+      // Sempre cria nova sessão Stripe
       const { url } = await createCheckoutSession(dreamTitle);
 
       addDebug("Redirecting to Stripe Checkout");
@@ -113,7 +118,6 @@ export default function SubmitWish() {
   /* =========================
      UI
   ========================== */
-
   return (
     <div className="min-h-screen bg-gradient-dark">
       <Header />
@@ -130,7 +134,6 @@ export default function SubmitWish() {
           </div>
 
           <form onSubmit={handleSubmit} className="card-dark p-8 rounded-xl">
-            {/* AUTHOR */}
             <div className="mb-6">
               <label className="block text-sm text-neon-secondary mb-2">
                 Name or Pseudonym *
@@ -144,7 +147,6 @@ export default function SubmitWish() {
               />
             </div>
 
-            {/* COUNTRY */}
             <div className="mb-6">
               <label className="block text-sm text-neon-secondary mb-2">
                 Country *
@@ -158,7 +160,6 @@ export default function SubmitWish() {
               />
             </div>
 
-            {/* LANGUAGE */}
             <div className="mb-6">
               <label className="block text-sm text-neon-secondary mb-2">
                 Language (optional)
@@ -171,7 +172,6 @@ export default function SubmitWish() {
               />
             </div>
 
-            {/* DREAM */}
             <div className="mb-6">
               <label className="block text-sm text-neon-secondary mb-2">
                 Your Dream *
@@ -191,14 +191,12 @@ export default function SubmitWish() {
               </p>
             </div>
 
-            {/* ERROR */}
             {error && (
               <div className="mb-6 p-4 border border-red-500/40 bg-red-500/10 rounded-lg text-red-400 text-sm">
                 {error}
               </div>
             )}
 
-            {/* SUBMIT */}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -212,7 +210,6 @@ export default function SubmitWish() {
             </button>
           </form>
 
-          {/* DEBUG (DEV ONLY) */}
           {import.meta.env.DEV && debugInfo.length > 0 && (
             <div className="mt-8 text-xs text-neon-secondary/70 space-y-1">
               {debugInfo.map((d, i) => (
