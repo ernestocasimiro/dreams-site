@@ -84,14 +84,17 @@ export default function SubmitWish() {
     clearDebug();
     setError("");
 
-    if (!wish.trim() || wish.length < 10) {
+    // ✅ ALTERAÇÃO FEITA AQUI (somente aqui)
+    if (wish.trim().length < 10) {
       setError("Your dream must have at least 10 characters.");
       return;
     }
+
     if (!author.trim()) {
       setError("Please enter your name or pseudonym.");
       return;
     }
+
     if (!country.trim()) {
       setError("Please enter your country.");
       return;
@@ -103,7 +106,6 @@ export default function SubmitWish() {
       const dreamTitle = generateTitle(wish, author);
       addDebug(`Generated title: ${dreamTitle}`);
 
-      // Sempre cria nova sessão Stripe
       const { url } = await createCheckoutSession(dreamTitle);
 
       addDebug("Redirecting to Stripe Checkout");
