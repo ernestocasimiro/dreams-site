@@ -30,7 +30,7 @@ const allowedOrigins = [
   "http://localhost:8080",
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://monumentofdreams-hyahgnxz6-ernestomiguelito-gmailcoms-projects.vercel.app",
+  "https://monumentofdreams.com",
   "https://gilded-squirrel-086a27.netlify.app",
 ];
 
