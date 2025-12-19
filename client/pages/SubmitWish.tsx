@@ -1,12 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-// URL do backend
-const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || "https://dreams-site.onrender.com";
-
 export default function SubmitWish() {
+  const navigate = useNavigate();
+
   const [wish, setWish] = useState("");
   const [author, setAuthor] = useState("");
   const [country, setCountry] = useState("");
@@ -33,50 +32,6 @@ export default function SubmitWish() {
   const clearDebug = () => setDebugInfo([]);
 
   /* =========================
-     STRIPE SESSION (SEM DB)
-  ========================== */
-  const createCheckoutSession = async (dreamTitle: string) => {
-    addDebug("Creating Stripe checkout session (no DB write)");
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: 100,
-          currency: "usd",
-          dream: {
-            title: dreamTitle,
-            description: wish,
-            author: author.trim(),
-            country: country.trim(),
-            language: language.trim() || null,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(
-          errData?.error || "Failed to create payment session. Try again."
-        );
-      }
-
-      const data = await response.json();
-
-      if (!data?.url) {
-        throw new Error("Payment URL not returned by server.");
-      }
-
-      addDebug("Checkout session created successfully");
-      return data;
-    } catch (err: any) {
-      addDebug(`Network/Fetch error: ${err.message}`);
-      throw err;
-    }
-  };
-
-  /* =========================
      SUBMIT HANDLER
   ========================== */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -84,7 +39,6 @@ export default function SubmitWish() {
     clearDebug();
     setError("");
 
-    // ✅ ALTERAÇÃO FEITA AQUI (somente aqui)
     if (wish.trim().length < 10) {
       setError("Your dream must have at least 10 characters.");
       return;
@@ -106,13 +60,23 @@ export default function SubmitWish() {
       const dreamTitle = generateTitle(wish, author);
       addDebug(`Generated title: ${dreamTitle}`);
 
-      const { url } = await createCheckoutSession(dreamTitle);
-
-      addDebug("Redirecting to Stripe Checkout");
-      window.location.href = url;
+      // 🔑 REDIRECIONAMENTO PARA O CHECKOUT CUSTOMIZADO
+      navigate("/checkout", {
+        state: {
+          amount: 100, // $1.00 → em centavos (ajuste se mudar moeda)
+          productId: "dream_submission",
+          dream: {
+            title: dreamTitle,
+            description: wish,
+            author: author.trim(),
+            country: country.trim(),
+            language: language.trim() || null,
+          },
+        },
+      });
     } catch (err: any) {
       addDebug(`Error: ${err.message}`);
-      setError(err.message);
+      setError("Unexpected error. Please try again.");
       setIsSubmitting(false);
     }
   };

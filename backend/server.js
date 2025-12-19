@@ -84,6 +84,32 @@ app.get("/health", (req, res) => {
 });
 
 /* =======================
+   CREATE PAYMENT INTENT
+======================= */
+app.post("/create-payment-intent", async (req, res) => {
+  try {
+    const { amount, productId } = req.body;
+
+    if (!amount || amount < 50) {
+      return res.status(400).json({ error: "Valor inválido" });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: "eur",
+      metadata: {
+        productId: productId || "unknown",
+      },
+      automatic_payment_methods: { enabled: true },
+    });
+
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =======================
    STRIPE WEBHOOK
 ======================= */
 app.post(
@@ -172,7 +198,14 @@ app.post("/create-checkout-session", async (req, res) => {
   try {
     const { dream } = req.body;
 
-    if (!dream || typeof dream !== "object" || !dream.title || !dream.description || !dream.author || !dream.country) {
+    if (
+      !dream ||
+      typeof dream !== "object" ||
+      !dream.title ||
+      !dream.description ||
+      !dream.author ||
+      !dream.country
+    ) {
       return res.status(400).json({ error: "Invalid dream data" });
     }
 
