@@ -33,3 +33,4 @@ coverage/
 # yarn.lock
 
 .vercel
+.env*.local

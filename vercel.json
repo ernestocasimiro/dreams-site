@@ -1,9 +1,9 @@
 {
-  "builds": [
-    { "src": "dist/spa/**/*", "use": "@vercel/static" }
-  ],
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "client/dist/spa",
   "routes": [
-    { "src": "/assets/(.*)", "dest": "dist/spa/assets/$1" },
-    { "src": "/(.*)", "dest": "dist/spa/index.html" }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
