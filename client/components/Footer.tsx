@@ -78,7 +78,7 @@ export default function Footer() {
                 </svg>
               </a>
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/monumentsofdreams/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-8 h-8 rounded-full border border-neon-primary/30 flex items-center justify-center text-neon-primary hover:bg-neon-primary hover:text-dark-bg transition-all"
