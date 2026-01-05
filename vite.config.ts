@@ -1,19 +1,18 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { createServer } from "./server";
+import express from "express";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: "./", // ✅ MUITO IMPORTANTE para funcionar no Vercel SPA
+  base: "./",
 
   server: {
     host: "::",
     port: 8080,
     fs: {
       allow: ["./", "./client", "./shared"],
-      // removido: base dentro de fs (era incorreto)
-      deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
+      deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**"],
     },
   },
 
@@ -34,9 +33,16 @@ export default defineConfig(({ mode }) => ({
 function expressPlugin(): Plugin {
   return {
     name: "express-plugin",
-    apply: "serve", // Only during dev
+    apply: "serve",
     configureServer(server) {
-      const app = createServer();
+      const app = express();
+      
+      // Middleware básico
+      app.use((req, res, next) => {
+        console.log(`[Express] ${req.method} ${req.url}`);
+        next();
+      });
+      
       server.middlewares.use(app);
     },
   };
