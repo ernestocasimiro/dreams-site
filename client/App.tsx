@@ -22,6 +22,8 @@ import Terms from "./pages/Terms.js";
 import FAQ from "./pages/FAQ.js";
 import Support from "./pages/Support.js";
 import Checkout from "./pages/Checkout";
+import DreamsAboutDreams from "./pages/DreamsAboutDreams.js";
+import DreamsThatComeTrue from "./pages/DreamsThatComeTrue.js";
 
 // Teste de conexão removido ou ajustado
 async function testConnection() {
@@ -66,6 +68,9 @@ const App = () => (
           <Route path="/support" element={<Support />} />
           <Route path="/dream/:id" element={<DreamPage />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/dreams-about-dreams" element={<DreamsAboutDreams />} />
+          <Route path="/dreams-that-come-true" element={<DreamsThatComeTrue />} 
+        />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

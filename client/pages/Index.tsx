@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import supabase from "@/config/supabaseClient";
 
 type Dream = {
   id: string;
-  title?: string | null;
   description?: string | null;
   author?: string | null;
-  country?: string | null;
-  language?: string | null;
   likes?: number | null;
   views?: number | null;
   created_at?: string | null;
@@ -59,119 +57,189 @@ export default function Index() {
     resize();
     window.addEventListener("resize", resize);
 
-    interface Particle { x:number; y:number; vx:number; vy:number; radius:number; opacity:number }
-    const particles:Particle[] = Array.from({ length:50 }).map(() => ({
-      x:Math.random()*canvas.width,
-      y:Math.random()*canvas.height,
-      vx:(Math.random()-.5)*1,
-      vy:(Math.random()-.5)*1,
-      radius:Math.random()*2+.5,
-      opacity:Math.random()*.5+.1
+    const particles = Array.from({ length: 50 }).map(() => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 1,
+      vy: (Math.random() - 0.5) * 1,
+      radius: Math.random() * 2 + 0.5,
+      opacity: Math.random() * 0.5 + 0.1,
     }));
 
     const animate = () => {
-      ctx.fillStyle="rgba(15,15,31,.1)";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-
-      particles.forEach(particle=>{
-        particle.x+=particle.vx; particle.y+=particle.vy;
-        if(particle.x<0||particle.x>canvas.width) particle.vx*=-1;
-        if(particle.y<0||particle.y>canvas.height) particle.vy*=-1;
-        ctx.fillStyle=`rgba(127,90,240,${particle.opacity})`;
-        ctx.beginPath(); ctx.arc(particle.x,particle.y,particle.radius,0,Math.PI*2); ctx.fill();
-
-        particles.forEach(other=>{
-          const dx=other.x-particle.x, dy=other.y-particle.y;
-          const dist=Math.sqrt(dx*dx+dy*dy);
-          if(dist<150){
-            ctx.strokeStyle=`rgba(127,90,240,${(particle.opacity*(1-dist/150))/2})`;
-            ctx.lineWidth=.5; ctx.beginPath(); ctx.moveTo(particle.x,particle.y); ctx.lineTo(other.x,other.y); ctx.stroke();
-          }
-        });
+      ctx.fillStyle = "rgba(15,15,31,.1)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        ctx.fillStyle = `rgba(127,90,240,${p.opacity})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
       });
       requestAnimationFrame(animate);
     };
-    animate();
-    return ()=>window.removeEventListener("resize",resize);
-  }, []);
 
-  const FEATURES = [
-    {title:"Digital Permanence",description:"Your wish becomes part of a collective monument of human aspirations"},
-    {title:"Community Inspiration",description:"Inspire millions by sharing your dreams and aspirations"},
-    {title:"Eternal Legacy",description:"Your dreams will be preserved for generations to come"}
-  ];
+    animate();
+    return () => window.removeEventListener("resize", resize);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-dark overflow-x-hidden">
-      <Header/>
-      <canvas ref={canvasRef} className="fixed inset-0 opacity-20 sm:opacity-30 pointer-events-none"/>
-      
-      <main className="relative z-10 text-white">
+      <Header />
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 opacity-20 pointer-events-none"
+      />
 
-        {/* HERO RESPONSIVE */}
-        <section className="min-h-[80vh] md:min-h-screen flex flex-col justify-center items-center px-5 text-center gap-6 pt-28">
-          <h1 className="font-orbitron font-bold leading-tight text-3xl sm:text-4xl md:text-6xl max-w-3xl">
-            Turn your dreams into <span className="bg-gradient-to-r from-neon-primary to-neon-secondary text-transparent bg-clip-text">digital monuments</span>
+      <main className="relative z-10 text-white">
+        {/* HERO */}
+        <section className="min-h-screen flex flex-col justify-center items-center px-6 text-center gap-6 pt-28">
+          <h1 className="font-orbitron font-bold text-4xl sm:text-5xl md:text-6xl max-w-4xl">
+            Dreams{" "}
+            <span className="bg-gradient-to-r from-neon-primary to-neon-secondary bg-clip-text text-transparent">
+              Are True
+            </span>
           </h1>
 
-          <p className="text-neon-secondary text-sm sm:text-lg max-w-xl font-light">
-            Share your wish and inspire the future
+          <p className="text-neon-secondary max-w-xl text-sm sm:text-lg">
+            Monument of Dreams is a digital space where people from all over the
+            world share their dreams and wishes — creating a collective monument
+            of human aspirations.
           </p>
 
-          <Link to="/submit" className="neon-button text-sm sm:text-lg px-6 py-3">
+          <Link to="/submit" className="neon-button px-7 py-3 text-sm sm:text-lg">
             Submit My Wish – 1 USD
           </Link>
         </section>
 
-        {/* FEATURES RESPONSIVE */}
-        <section className="py-16 px-5">
-          <h2 className="font-orbitron text-2xl sm:text-4xl font-bold text-center mb-12">Why Share Your Dream?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {FEATURES.map((f,i)=>(
-              <div key={i} className="card-dark p-6 rounded-xl text-center hover:shadow-glow-neon transition backdrop-blur-lg">
-                <h3 className="text-neon-primary text-xl mb-2">{f.title}</h3>
-                <p className="text-neon-secondary/80 text-sm">{f.description}</p>
-              </div>
-            ))}
+        {/* MANIFESTO */}
+        <section className="relative py-24 px-6">
+          <div className="max-w-5xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              whileHover={{ scale: 1.04, y: -8 }}
+              whileTap={{ scale: 0.97 }}
+              animate={{
+                boxShadow: [
+                  "0 0 25px rgba(127,90,240,0.25)",
+                  "0 0 45px rgba(127,90,240,0.45)",
+                  "0 0 25px rgba(127,90,240,0.25)",
+                ],
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 260,
+                damping: 22,
+                boxShadow: {
+                  duration: 8,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                },
+              }}
+              className="card-dark backdrop-blur-xl border border-neon-primary/30 rounded-3xl p-10 sm:p-16"
+            >
+              <h2 className="font-orbitron text-2xl sm:text-4xl text-center mb-8">
+                A Monument Built From Dreams
+              </h2>
+              <p className="text-neon-secondary/90 text-center max-w-3xl mx-auto text-base sm:text-lg">
+                Dreams have always been part of human history. Monument of Dreams
+                exists to preserve them — not as fleeting thoughts, but as
+                digital monuments of who we are and what we aspire to become.
+              </p>
+            </motion.div>
           </div>
         </section>
 
-        {/* DREAMS RESPONSIVE */}
-        <section className="py-16 px-5 max-w-6xl mx-auto">
-          <h2 className="font-orbitron text-2xl sm:text-4xl font-bold mb-4">Recent Dreams</h2>
-          <p className="text-neon-secondary/70 mb-8 text-sm sm:text-base">Latest wishes from around the world</p>
+        {/* SEO EXPLORATION */}
+        <section className="py-24 px-6">
+          <h2 className="font-orbitron text-3xl sm:text-4xl text-center mb-14">
+            Explore the Meaning of Dreams
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto">
+            {/* ABOUT DREAMS */}
+            <motion.div
+              whileHover={{ y: -6, scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="card-dark border border-neon-primary/20 rounded-3xl p-8 sm:p-10"
+            >
+              <h3 className="font-orbitron text-xl mb-3">
+                Dreams About Dreams
+              </h3>
+              <p className="text-neon-secondary/80 mb-6">
+                Discover why dreams matter, their role in human history, and
+                how they shape identity and purpose.
+              </p>
+              <Link
+                to="/dreams-about-dreams"
+                className="text-neon-primary hover:underline"
+              >
+                Explore meaning →
+              </Link>
+            </motion.div>
+
+            {/* DREAMS THAT COME TRUE */}
+            <motion.div
+              whileHover={{ y: -6, scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="card-dark border border-neon-primary/20 rounded-3xl p-8 sm:p-10"
+            >
+              <h3 className="font-orbitron text-xl mb-3">
+                Dreams That Come True
+              </h3>
+              <p className="text-neon-secondary/80 mb-6">
+                Explore how belief, persistence, and shared dreams can transform
+                quiet thoughts into reality.
+              </p>
+              <Link
+                to="/dreams-that-come-true"
+                className="text-neon-primary hover:underline"
+              >
+                Read stories →
+              </Link>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* RECENT DREAMS */}
+        <section className="py-20 px-6 max-w-6xl mx-auto">
+          <h2 className="font-orbitron text-3xl sm:text-4xl mb-4">
+            Recent Dreams
+          </h2>
+          <p className="text-neon-secondary/70 mb-10">
+            Latest wishes from around the world
+          </p>
 
           {loading ? (
-            <p className="text-center py-10">Loading...</p>
-          ) : recentDreams.length?(
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {recentDreams.map(d=>(
-                  <Link key={d.id} to={`/dream/${d.id}`} className="card-dark p-5 rounded-xl hover:shadow-glow-neon transition block">
-                    <p className="text-neon-secondary text-sm line-clamp-5 mb-3">"{d.description}"</p>
-                    <div className="flex justify-between text-xs text-neon-secondary/70 pt-3 border-t border-neon-primary/20">
-                      <span>{d.author||"Anonymous"}</span>
-                      <span>{formatDate(d.created_at)}</span>
-                    </div>
-                    <div className="flex justify-between text-[11px] text-neon-secondary/60 mt-2">
-                      <span>Likes: {d.likes||0}</span>
-                      <span>Views: {d.views||0}</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="text-center mt-10">
-                <Link to="/gallery" className="neon-button px-6 py-3 text-sm sm:text-lg">
-                  View All Dreams
+            <p className="text-center">Loading...</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentDreams.map((d) => (
+                <Link
+                  key={d.id}
+                  to={`/dream/${d.id}`}
+                  className="card-dark p-6 rounded-xl hover:shadow-glow-neon transition"
+                >
+                  <p className="text-neon-secondary line-clamp-4 mb-4">
+                    "{d.description}"
+                  </p>
+                  <div className="flex justify-between text-xs text-neon-secondary/60 border-t border-neon-primary/20 pt-3">
+                    <span>{d.author || "Anonymous"}</span>
+                    <span>{formatDate(d.created_at)}</span>
+                  </div>
                 </Link>
-              </div>
-            </>
-          ):<p>No dreams yet. Be the first!</p>}
+              ))}
+            </div>
+          )}
         </section>
       </main>
 
-      <Footer/>
+      <Footer />
     </div>
   );
 }
