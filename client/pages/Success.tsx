@@ -26,7 +26,7 @@ export default function Success() {
           <div className="bg-green-900/20 border border-green-500 rounded-xl p-8 mb-8">
             <div className="text-green-400 text-6xl mb-4">✓</div>
             <h1 className="font-orbitron text-3xl font-bold text-white mb-4">
-              Payment Successful!
+              Your Dream Is Now Part of the Monument
             </h1>
             <p className="text-neon-secondary mb-6">
               Thank you for your contribution. Your dream has been submitted to the gallery.
