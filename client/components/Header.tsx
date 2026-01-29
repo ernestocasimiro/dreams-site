@@ -120,7 +120,7 @@ export default function Header() {
           </Link>
         </nav>
 
-        {/* Mobile Hamburger */}
+        {/* Mobile Hamburger (SVG animado) */}
         <button
           onClick={() => setMobileMenu(v => !v)}
           className="sm:hidden text-neon-primary"
@@ -170,57 +170,44 @@ export default function Header() {
         </button>
       </div>
 
-      {/* Mobile Menu + Overlay */}
+      {/* Mobile Menu (swipe-to-close) */}
       <AnimatePresence>
         {mobileMenu && (
-          <>
-            {/* OVERLAY – clicar fora fecha */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black sm:hidden z-40"
-              onClick={() => setMobileMenu(false)}
-            />
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -30 }}
+            transition={{ duration: 0.25 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y < -80) setMobileMenu(false);
+            }}
+            className="sm:hidden bg-dark-bg/95 backdrop-blur-xl border-t border-neon-primary/10"
+          >
+            <nav className="flex flex-col px-6 py-6 gap-4">
+              <Link to="/gallery" className="text-neon-secondary hover:text-neon-primary">
+                Gallery
+              </Link>
+              <Link to="/submit" className="text-neon-secondary hover:text-neon-primary">
+                Submit Dream
+              </Link>
+              <Link to="/dreams-about-dreams" className="text-neon-secondary hover:text-neon-primary">
+                About Dreams
+              </Link>
+              <Link to="/dreams-that-come-true" className="text-neon-secondary hover:text-neon-primary">
+                Dreams That Come True
+              </Link>
 
-            {/* MENU */}
-            <motion.div
-              initial={{ opacity: 0, y: -30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -30 }}
-              transition={{ duration: 0.25 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              onDragEnd={(_, info) => {
-                if (info.offset.y < -80) setMobileMenu(false);
-              }}
-              className="sm:hidden bg-dark-bg/95 backdrop-blur-xl border-t border-neon-primary/10 z-50"
-            >
-              <nav className="flex flex-col px-6 py-6 gap-4">
-                <Link to="/gallery" className="text-neon-secondary hover:text-neon-primary">
-                  Gallery
-                </Link>
-                <Link to="/submit" className="text-neon-secondary hover:text-neon-primary">
-                  Submit Dream
-                </Link>
-                <Link to="/dreams-about-dreams" className="text-neon-secondary hover:text-neon-primary">
-                  About Dreams
-                </Link>
-                <Link to="/dreams-that-come-true" className="text-neon-secondary hover:text-neon-primary">
-                  Dreams That Come True
-                </Link>
+              <Link to="/submit" className="neon-button mt-4 text-center">
+                Submit – FREE
+              </Link>
 
-                <Link to="/submit" className="neon-button mt-4 text-center">
-                  Submit – FREE
-                </Link>
-
-                <p className="text-xs text-neon-secondary/50 text-center mt-2">
-                  Swipe up or tap outside to close
-                </p>
-              </nav>
-            </motion.div>
-          </>
+              <p className="text-xs text-neon-secondary/50 text-center mt-2">
+                Swipe up to close
+              </p>
+            </nav>
+          </motion.div>
         )}
       </AnimatePresence>
     </header>
