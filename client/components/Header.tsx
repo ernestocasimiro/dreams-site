@@ -95,7 +95,7 @@ export default function Header() {
 
           {/* CTA */}
           <Link to="/submit" className="hidden sm:inline neon-button text-sm">
-            Submit – $1
+            Submit – FREE
           </Link>
         </nav>
       </div>

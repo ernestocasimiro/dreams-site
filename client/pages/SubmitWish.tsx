@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import supabase from "@/config/supabaseClient";
 
 export default function SubmitWish() {
   const navigate = useNavigate();
@@ -154,21 +155,44 @@ export default function SubmitWish() {
   /* =========================
      CONFIRMAÇÃO DO SONHO - SEGUNDA FASE
   ========================== */
-  const handleConfirmSubmission = () => {
-    if (!pendingDreamData) return;
-    
-    setIsSubmitting(true);
-    addDebug("User confirmed submission, redirecting to payment...");
-    
-    // 🔑 REDIRECIONAMENTO PARA O CHECKOUT CUSTOMIZADO
-    navigate("/checkout", {
-      state: {
-        amount: 100, // $1.00 → em centavos (ajuste se mudar moeda)
-        productId: "dream_submission",
-        dream: pendingDreamData,
-      },
-    });
-  };
+  const handleConfirmSubmission = async () => {
+  if (!pendingDreamData) return;
+
+  setIsSubmitting(true);
+  addDebug("User confirmed submission, saving dream to Supabase...");
+
+  try {
+    const { error: insertError } = await supabase
+      .from("dreams")
+      .insert([
+        {
+          title: pendingDreamData.title,
+          description: pendingDreamData.description,
+          author: pendingDreamData.author,
+          country: pendingDreamData.country,
+          language: pendingDreamData.language,
+          likes: 0,
+          views: 0,
+          paid: false,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+    if (insertError) {
+      console.error("❌ Supabase insert error:", insertError);
+      setError(" Failed to save your dream. Please try again.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    navigate("/success");
+  } catch (err) {
+    console.error("❌ Unexpected error:", err);
+    setError(" An unexpected cosmic glitch occurred. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleCancelConfirmation = () => {
     setShowConfirmation(false);
@@ -236,16 +260,16 @@ export default function SubmitWish() {
               </div>
             </div>
 
-            <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-              <div className="flex items-start">
-                <span className="text-yellow-400 mr-2">⚠️</span>
-                <div className="text-sm text-yellow-300">
-                  <strong>Important:</strong> If you go back from the payment screen, 
-                  <span className="font-bold text-white"> all entered data will be lost</span>. 
-                  Make sure everything is correct!
-                </div>
+           <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+            <div className="flex items-start">
+              <span className="text-yellow-400 mr-2">⚠️</span>
+              <div className="text-sm text-yellow-300">
+                <strong>Important:</strong> If you go back or close this page, 
+                <span className="font-bold text-white"> all entered data will be lost</span>. 
+                Please make sure everything is correct before confirming.
               </div>
             </div>
+          </div>
 
             <div className="flex space-x-4">
               <button
@@ -259,7 +283,7 @@ export default function SubmitWish() {
                 disabled={isSubmitting}
                 className="flex-1 py-3 neon-button hover:shadow-glow-neon disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Launching..." : "Yes, Proceed to Payment"}
+                {isSubmitting ? "Launching..." : "Yes, Submit My Dream"}
               </button>
             </div>
           </div>
@@ -281,8 +305,7 @@ export default function SubmitWish() {
               <div className="flex items-center text-sm text-neon-blue">
                 <span className="mr-2">💡</span>
                 <span>
-                  <strong>Tip:</strong> Review your dream before proceeding. 
-                  Data cannot be recovered if you leave the payment page.
+                  <strong>Tip:</strong> Review your dream before proceeding.
                 </span>
               </div>
             </div>
@@ -391,7 +414,7 @@ export default function SubmitWish() {
                   Validating your dream...
                 </span>
               ) : (
-                "Submit & Pay $1.00"
+                "Submit My Dream"
               )}
             </button>
 
@@ -400,14 +423,15 @@ export default function SubmitWish() {
               <div className="flex items-start text-xs text-neon-secondary/70">
                 <span className="mr-2 mt-0.5">🔒</span>
                 <span>
-                  <strong>Remember:</strong> After clicking submit, you'll have one chance to complete the payment. 
-                  Returning will reset the form. Make sure your dream is perfect!
+                  <strong>Important:</strong> If you go back or close this page,
+                   <span className="font-bold text-white"> all entered data will be lost</span>. 
+                    Please make sure everything is correct before confirming.
                 </span>
               </div>
             </div>
           </form>
 
-          {/* DEBUG INFO (APENAS DESENVOLVIMENTO) */}
+          {/* DEBUG INFO (APENAS DESENVOLVIMENTO) 
           {import.meta.env.DEV && debugInfo.length > 0 && (
             <div className="mt-8 p-4 bg-black/50 rounded-lg border border-neon-pink/20">
               <div className="flex justify-between items-center mb-2">
@@ -427,7 +451,7 @@ export default function SubmitWish() {
                 ))}
               </div>
             </div>
-          )}
+          )} */}
         </div>
       </main>
 

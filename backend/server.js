@@ -256,6 +256,7 @@ app.get("/create-checkout-session", (req, res) => {
   res.status(405).json({ error: "Method Not Allowed", message: "Use POST" });
 });
 
+
 /* =======================
    START SERVER
 ======================= */
@@ -267,3 +268,4 @@ app.listen(PORT, () => {
   console.log(`💳 Stripe OK: ${!!process.env.STRIPE_SECRET_KEY}`);
   console.log("=".repeat(50));
 });
+

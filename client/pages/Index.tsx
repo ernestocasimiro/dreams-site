@@ -111,7 +111,7 @@ export default function Index() {
           </p>
 
           <Link to="/submit" className="neon-button px-7 py-3 text-sm sm:text-lg">
-            Submit My Wish – 1 USD
+            Submit My Wish – FREE
           </Link>
         </section>
 
